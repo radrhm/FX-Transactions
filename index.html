@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spot FX - Transaction Manager</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <div class="app-container">
+        <!-- Sidebar / Navigation -->
+        <nav class="sidebar">
+            <div class="logo">
+                <i class="fa-solid fa-chart-line"></i>
+                <span>SpotFX</span>
+            </div>
+            <ul class="nav-links">
+                <li class="active" onclick="switchTab('entry')">
+                    <i class="fa-solid fa-plus-circle"></i> New Trade
+                </li>
+                <li onclick="switchTab('history')">
+                    <i class="fa-solid fa-clock-rotate-left"></i> History
+                </li>
+                <li onclick="switchTab('mismatch')">
+                    <i class="fa-solid fa-triangle-exclamation"></i> Mismatch Check
+                </li>
+                <li onclick="switchTab('reference')">
+                    <i class="fa-solid fa-database"></i> Reference Data
+                </li>
+            </ul>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="content-area">
+
+            <!-- Tab 1: New Transaction Entry -->
+            <section id="entry" class="tab-content active">
+                <header>
+                    <h1>New Spot Transaction</h1>
+                    <p>Enter trade details below</p>
+                </header>
+
+                <div class="glass-panel form-container">
+                    <form id="transactionForm">
+                        <div class="form-grid">
+                            <!-- Date & Time -->
+                            <div class="form-group">
+                                <label for="date">Trade Date</label>
+                                <input type="date" id="date" required>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="time">Time <span id="timeDisplay"
+                                        class="highlight-text">12:00</span></label>
+                                <div class="time-control">
+                                    <input type="time" id="timeInput" hidden>
+                                    <input type="range" id="timeSlider" min="0" max="1439" value="720" class="slider">
+                                </div>
+                            </div>
+
+                            <!-- Banks -->
+                            <div class="form-group">
+                                <label for="bank1">Bank 1</label>
+                                <div class="input-icon">
+                                    <i class="fa-solid fa-building-columns"></i>
+                                    <select id="bank1" required>
+                                        <option value="" disabled selected>Select Bank 1</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="bank2">Bank 2</label>
+                                <div class="input-icon">
+                                    <i class="fa-solid fa-building-columns"></i>
+                                    <select id="bank2" required>
+                                        <option value="" disabled selected>Select Bank 2</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- Currency Pair & Rate -->
+                            <div class="form-group">
+                                <label for="pair">Currency Pair</label>
+                                <select id="pair" required>
+                                    <option value="" disabled selected>Select Pair</option>
+                                    <!-- Populated dynamically -->
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="rate">Market Rate</label>
+                                <input type="number" id="rate" step="0.00001" placeholder="1.12345" required>
+                            </div>
+
+                            <!-- Direction -->
+                            <div class="form-group full-width">
+                                <label>Direction</label>
+                                <div class="toggle-switch">
+                                    <input type="radio" id="buy" name="direction" value="Buy" checked>
+                                    <label for="buy" class="buy-label">Buy</label>
+
+                                    <input type="radio" id="sell" name="direction" value="Sell">
+                                    <label for="sell" class="sell-label">Sell</label>
+                                </div>
+                            </div>
+
+                            <!-- Amounts -->
+                            <div class="form-group">
+                                <label for="amountBase">Amount (Base)</label>
+                                <input type="number" id="amountBase" step="0.01" placeholder="100,000.00" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="amountCounter">Counterparty Amount</label>
+                                <input type="text" id="amountCounter" readonly placeholder="calculated..."
+                                    class="readonly-input">
+                            </div>
+                        </div>
+
+                        <div class="form-actions">
+                            <button type="button" id="generateBtn" class="btn-primary">
+                                <i class="fa-solid fa-check"></i> Generate & Save
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </section>
+
+            <!-- Tab 2: History -->
+            <section id="history" class="tab-content">
+                <header>
+                    <h1>Transaction History</h1>
+                    <p>View past trades</p>
+                </header>
+
+                <div class="glass-panel">
+                    <div class="filters">
+                        <div class="filter-group">
+                            <i class="fa-solid fa-calendar"></i>
+                            <input type="date" id="filterDate">
+                        </div>
+                        <div class="search-box">
+                            <i class="fa-solid fa-search"></i>
+                            <input type="text" id="searchInput" placeholder="Global Search...">
+                        </div>
+                        <select id="filterDirection">
+                            <option value="All">All Directions</option>
+                            <option value="Buy">Buy</option>
+                            <option value="Sell">Sell</option>
+                        </select>
+                        <button onclick="resetFilters()" class="btn-icon" title="Reset Filters"><i
+                                class="fa-solid fa-rotate-right"></i></button>
+                    </div>
+
+                    <div class="table-container">
+                        <table class="sortable-table">
+                            <thead>
+                                <tr>
+                                    <th data-col="transaction_number">
+                                        <div class="th-content">
+                                            <span onclick="handleSort('transaction_number')">ID <i
+                                                    class="sort-icon fa-solid fa-sort"></i></span>
+                                        </div>
+                                    </th>
+                                    <th data-col="date">
+                                        <div class="th-content">
+                                            <span onclick="handleSort('date')">Date <i
+                                                    class="sort-icon fa-solid fa-sort"></i></span>
+                                        </div>
+                                    </th>
+                                    <th data-col="time">
+                                        <div class="th-content">
+                                            <span onclick="handleSort('time')">Time <i
+                                                    class="sort-icon fa-solid fa-sort"></i></span>
+                                        </div>
+                                    </th>
+                                    <th data-col="pair">
+                                        <div class="th-content">
+                                            <span onclick="handleSort('pair')">Pair <i
+                                                    class="sort-icon fa-solid fa-sort"></i></span>
+                                            <button class="th-filter-btn" onclick="toggleColumnFilter(this, 'pair')"><i
+                                                    class="fa-solid fa-filter"></i></button>
+                                        </div>
+                                    </th>
+                                    <th data-col="direction">
+                                        <div class="th-content">
+                                            <span onclick="handleSort('direction')">Dir <i
+                                                    class="sort-icon fa-solid fa-sort"></i></span>
+                                        </div>
+                                    </th>
+                                    <th data-col="rate">
+                                        <div class="th-content">
+                                            <span onclick="handleSort('rate')">Rate <i
+                                                    class="sort-icon fa-solid fa-sort"></i></span>
+                                        </div>
+                                    </th>
+                                    <th data-col="amount_base">
+                                        <div class="th-content">
+                                            <span onclick="handleSort('amount_base')">Amt (Base) <i
+                                                    class="sort-icon fa-solid fa-sort"></i></span>
+                                        </div>
+                                    </th>
+                                    <th>Counter Unit</th>
+                                    <th data-col="bank1">
+                                        <div class="th-content">
+                                            <span onclick="handleSort('bank1')">Bank 1 <i
+                                                    class="sort-icon fa-solid fa-sort"></i></span>
+                                            <button class="th-filter-btn" onclick="toggleColumnFilter(this, 'bank1')"><i
+                                                    class="fa-solid fa-filter"></i></button>
+                                        </div>
+                                    </th>
+                                    <th data-col="bank2">
+                                        <div class="th-content">
+                                            <span onclick="handleSort('bank2')">Bank 2 <i
+                                                    class="sort-icon fa-solid fa-sort"></i></span>
+                                            <button class="th-filter-btn" onclick="toggleColumnFilter(this, 'bank2')"><i
+                                                    class="fa-solid fa-filter"></i></button>
+                                        </div>
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody id="historyTableBody">
+                                <!-- Populated by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Tab 3: Mismatch Check -->
+            <section id="mismatch" class="tab-content">
+                <header>
+                    <h1>Mismatch Check</h1>
+                    <p>Identify and Fix unbalanced trades</p>
+                </header>
+
+                <div class="glass-panel">
+                    <div class="table-container">
+                        <table id="mismatchTable">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Date/Time</th>
+                                    <th>Description</th>
+                                    <th>Missing Counterpart</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="mismatchTableBody">
+                                <!-- Populated by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Tab 4: Reference Data -->
+            <section id="reference" class="tab-content">
+                <header>
+                    <h1>Reference Data</h1>
+                    <p>Manage Banks and Currency Pairs</p>
+                </header>
+
+                <div class="ref-grid">
+                    <!-- Banks Section -->
+                    <div class="glass-panel">
+                        <h2>Banks</h2>
+                        <div class="input-with-btn">
+                            <input type="text" id="newBankName" placeholder="New Bank Name">
+                            <button onclick="addRefData('banks')" class="btn-icon add-btn"><i
+                                    class="fa-solid fa-plus"></i></button>
+                        </div>
+                        <ul id="banksList" class="ref-list">
+                            <!-- Populated by JS -->
+                        </ul>
+                    </div>
+
+                    <!-- Pairs Section -->
+                    <div class="glass-panel">
+                        <h2>Currency Pairs</h2>
+                        <div class="input-with-btn">
+                            <input type="text" id="newPairName" placeholder="New Pair (e.g. EUR/USD)">
+                            <button onclick="addRefData('pairs')" class="btn-icon add-btn"><i
+                                    class="fa-solid fa-plus"></i></button>
+                        </div>
+                        <ul id="pairsList" class="ref-list">
+                            <!-- Populated by JS -->
+                        </ul>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Notification Container -->
+    <div id="toastContainer" class="toast-container"></div>
+
+    <script src="script.js"></script>
+</body>
+
+</html>
